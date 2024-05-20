@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+    env_file:
+      - ./.env.test
+    ports:
+      - "80:80"
+    depends_on:
+      - db
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 80"
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=pastebin_authentication_service
+    ports:
+      - "5432:5423"
+volumes:
+  postgres_data:
