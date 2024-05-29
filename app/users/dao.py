@@ -23,6 +23,9 @@ class UsersDAO:
         await db.execute(query)
         await db.commit()
 
+        user = await UsersDAO.get_user(db, username=user_data.username)
+        return user
+
     @classmethod
     async def get_user(cls, db: AsyncSession, **filter_by):
         query = (
@@ -31,6 +34,14 @@ class UsersDAO:
         )
         user = await db.scalar(query)
         return user
+
+    @classmethod
+    async def get_all_users(cls, db: AsyncSession):
+        query = (
+            select(cls.model)
+        )
+        users = await db.scalars(query)
+        return users.all()
 
     @classmethod
     async def get_user_refresh_token(cls, db: AsyncSession, **filter_by):

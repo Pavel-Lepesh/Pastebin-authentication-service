@@ -1,17 +1,17 @@
 version: '3.9'
 
 services:
-  api:
+  auth_service:
     build:
       context: .
     env_file:
       - ./.env.test
     ports:
-      - "80:80"
+      - "81:81"
     depends_on:
-      - db
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 80"
-  db:
+      - auth_db
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 81"
+  auth_db:
     image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -21,5 +21,12 @@ services:
       - POSTGRES_DB=pastebin_authentication_service
     ports:
       - "5432:5423"
+  pastebin_nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - auth_service
 volumes:
   postgres_data:

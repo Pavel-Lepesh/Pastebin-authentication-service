@@ -18,9 +18,14 @@ async def get_authenticate_user(username: str, password: str, db: AsyncSession) 
     return user
 
 
-async def check_refresh_token(token: str, db: AsyncSession) -> Users:
+async def check_token(token: str, db: AsyncSession, refresh=False) -> Users | None:
+    secret_key = settings.JWT_REFRESH_SECRET_KEY if refresh else settings.JWT_ACCESS_SECRET_KEY
+
+    if not token.startswith("Bearer "):
+        raise InvalidTypeOfToken
+
     try:
-        payload = jwt.decode(token, settings.JWT_REFRESH_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token[7:], secret_key, algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
         raise CredentialsError
 
@@ -36,7 +41,8 @@ async def check_refresh_token(token: str, db: AsyncSession) -> Users:
     if datetime.fromtimestamp(exp, timezone.utc) < datetime.now(timezone.utc):
         raise ExpireTokenError
 
-    user_token_from_db = await UsersDAO.get_user_refresh_token(db, id=user_id)
-    if user_token_from_db != token:
-        raise FakeRefreshToken
-    return user
+    if refresh:
+        user_token_from_db = await UsersDAO.get_user_refresh_token(db, id=user_id)
+        if user_token_from_db != token:
+            raise FakeRefreshToken
+        return user

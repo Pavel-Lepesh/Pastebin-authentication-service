@@ -29,7 +29,7 @@ def create_tokens(user: Users,
         "is_superuser": user.is_superuser,
         "exp": access_expire
     }
-    access_token = jwt.encode(to_encode, settings.JWT_ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    access_token = "Bearer " + jwt.encode(to_encode, settings.JWT_ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     to_encode.update(exp=refresh_expire)
-    refresh_token = jwt.encode(to_encode, settings.JWT_REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    refresh_token = "Bearer " + jwt.encode(to_encode, settings.JWT_REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return Tokens(access_token=access_token, refresh_token=refresh_token)

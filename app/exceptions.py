@@ -42,3 +42,8 @@ class ExpireTokenError(AppException):
 class FakeRefreshToken(AppException):
     status_code = status.HTTP_401_UNAUTHORIZED
     detail = "Provided token was faked"
+
+
+class InvalidTypeOfToken(AppException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    detail = "Invalid type of token"
