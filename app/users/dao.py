@@ -1,6 +1,6 @@
 from app.users.models import Users
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import insert, select, update
+from sqlalchemy import insert, select, update, delete
 from app.users.shcemas import User
 from app.auth_utils import get_password_hash
 
@@ -42,6 +42,15 @@ class UsersDAO:
         )
         users = await db.scalars(query)
         return users.all()
+
+    @classmethod
+    async def delete_user(cls, db: AsyncSession, user_id):
+        query = (
+            delete(cls.model)
+            .where(cls.model.id == user_id)
+        )
+        await db.execute(query)
+        await db.commit()
 
     @classmethod
     async def get_user_refresh_token(cls, db: AsyncSession, **filter_by):

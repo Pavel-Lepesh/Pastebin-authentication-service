@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 from app.config import settings
@@ -9,6 +9,14 @@ from app.users.shcemas import Tokens
 from app.exceptions import CredentialsError
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def decode_token(token: str, secret_key: str) -> dict:
+    try:
+        payload = jwt.decode(token[7:], secret_key, algorithms=[settings.JWT_ALGORITHM])
+        return payload
+    except JWTError:
+        raise CredentialsError
 
 
 def get_password_hash(password: str):

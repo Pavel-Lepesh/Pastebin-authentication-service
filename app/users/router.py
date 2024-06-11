@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend_db.db_depends import get_db
-from app.users.shcemas import User, UserPublic, AccessTokenSchema
+from app.users.shcemas import User, UserPublic, AccessTokenSchema, RefreshTokenSchema, CreateResponse
 from app.users.dao import UsersDAO
 from app.users.shcemas import Tokens
 from app.auth_utils import create_tokens
@@ -24,15 +24,27 @@ async def get_all_users(db: Annotated[AsyncSession, Depends(get_db)]) -> list[Us
     return users
 
 
+@router.delete('/delete/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_by_id(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+    await UsersDAO.delete_user(db, user_id)
+
+
+@router.delete("/self-delete", status_code=status.HTTP_204_NO_CONTENT)
+async def user_self_deletion(token: str, db: Annotated[AsyncSession, Depends(get_db)]):
+    user = await check_token(token, db)
+    await UsersDAO.delete_user(db, user_id=user.id)
+
+
 @router.post('/create', status_code=status.HTTP_201_CREATED)
-async def create_user(user: User, db: Annotated[AsyncSession, Depends(get_db)]) -> Tokens:
+async def create_user(response: Response, user: User, db: Annotated[AsyncSession, Depends(get_db)]) -> CreateResponse:
     exist_user = await UsersDAO.get_user(db, username=user.username)
     if exist_user:
         raise UserAlreadyExists
     user = await UsersDAO.create_user(user, db)
     tokens = create_tokens(user=user)
     await UsersDAO.update_refresh_token(user.id, tokens.refresh_token, db)
-    return tokens
+    response.set_cookie(key="pastebin_refresh_token", value=tokens.refresh_token, httponly=True)
+    return CreateResponse(id=user.id, access_token=tokens.access_token, refresh_token=tokens.refresh_token)
 
 
 @router.post("/tokens", status_code=status.HTTP_200_OK)
@@ -42,29 +54,20 @@ async def get_token(response: Response, form_data: Annotated[OAuth2PasswordReque
     tokens = create_tokens(user=user)
     await UsersDAO.update_refresh_token(user.id, tokens.refresh_token, db)
     response.set_cookie(key="pastebin_refresh_token", value=tokens.refresh_token, httponly=True)
-    response.set_cookie(key="pastebin_access_token", value=tokens.access_token, httponly=True)
     return tokens
 
 
 @router.post("/refresh", status_code=status.HTTP_200_OK)
-async def refresh_and_get_new_tokens(refresh_token: str, db: Annotated[AsyncSession, Depends(get_db)]) -> Tokens:
-    user = await check_token(refresh_token, db, refresh=True)
+async def refresh_and_get_new_tokens(response: Response,
+                                     token: RefreshTokenSchema,
+                                     db: Annotated[AsyncSession, Depends(get_db)]) -> Tokens:
+    user = await check_token(token.refresh_token, db, refresh=True)
     tokens = create_tokens(user=user)
     await UsersDAO.update_refresh_token(user.id, tokens.refresh_token, db)
+    response.set_cookie(key="pastebin_refresh_token", value=tokens.refresh_token, httponly=True)
     return tokens
 
 
 @router.post("/verify", status_code=status.HTTP_200_OK)
 async def verify_access_token(token: AccessTokenSchema, db: Annotated[AsyncSession, Depends(get_db)]):
     await check_token(token.access_token, db)
-
-
-@router.get("/test_get")
-async def me_func(request: Request):
-    print("From print", {"Get test succeeded": "ura", "headers": request.headers})
-    return {"Get test succeeded": "ura", "headers": request.headers}
-
-
-@router.post("/test_post")
-async def func(request: Request):
-    return request.headers

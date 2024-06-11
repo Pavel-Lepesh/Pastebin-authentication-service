@@ -91,7 +91,6 @@ function testGet(r) {
                     var cookie = cookieArray[i].trim();
                     if (cookie.startsWith('pastebin_refresh_token=')) {
                         refreshToken = cookie.substring('pastebin_refresh_token='.length);
-                        r.return(100, refreshToken)
                         break;
                     }
                 }
@@ -102,6 +101,31 @@ function testGet(r) {
                 return;
             }
 
+            var auth_refresh_body = JSON.stringify({
+                refresh_token: refreshToken
+             });
+
+            r.subrequest("/_subrequest_refresh_token", {
+                method: 'POST',
+                body: auth_refresh_body
+            }, function(reply) {
+                if (reply.status == 200) {
+                    var new_tokens = JSON.parse(reply.responseBuffer);
+                    var access_token = new_tokens.access_token;
+
+                    r.headersOut['Authorization'] = access_token;
+
+                    r.subrequest("/_proxy_to_main_service", {
+                       method: r.method,
+                       body: r.requestBody,
+                       headers: r.headersIn
+                    }, function(proxy_reply) {
+                       r.return(proxy_reply.status, proxy_reply.responseBuffer);
+                    })
+                } else {
+                    r.return(reply.status, reply.responseBuffer);
+                }
+            })
         }
     });
 }
