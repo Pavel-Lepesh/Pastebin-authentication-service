@@ -30,8 +30,8 @@ async def delete_user_by_id(user_id: int, db: Annotated[AsyncSession, Depends(ge
 
 
 @router.delete("/self-delete", status_code=status.HTTP_204_NO_CONTENT)
-async def user_self_deletion(token: str, db: Annotated[AsyncSession, Depends(get_db)]):
-    user = await check_token(token, db)
+async def user_self_deletion(token: AccessTokenSchema, db: Annotated[AsyncSession, Depends(get_db)]):
+    user = await check_token(token.access_token, db)
     await UsersDAO.delete_user(db, user_id=user.id)
 
 
